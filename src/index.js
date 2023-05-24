@@ -34,6 +34,21 @@ app.get('/talker/:id', async (req, res) => {
   }
 });
 
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  let result = '';
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let counter = 0;
+  while (counter < 16) {
+    result += characters.charAt(Math.floor(Math.random() * 16));
+    counter += 1;
+  }
+  console.log(result);
+  return res.status(200).json({
+    "token": result
+  })
+});
+
 app.listen(PORT, () => {
   console.log('Online');
 });
