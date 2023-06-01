@@ -46,6 +46,16 @@ app.get('/talker', async (_req, res) => {
   return res.status(200).json( talkers );
 });
 
+app.get('/talker/search',
+tokenValidation, async (req, res) => {
+  const { q } = req.query;
+  const talkers = await importData();
+  const searchedTalker = talkers.filter((talker) => talker.name.includes(q));
+  if(!q) { return res.status(200).json(talkers) }
+  if(!searchedTalker) { return res.status(200).json([])}
+  return res.status(200).json(searchedTalker);
+});
+
 app.get('/talker/:id', async (req, res) => {
   const { id } = req.params;
   const talkers = await importData();
@@ -140,20 +150,20 @@ async (req, res) => {
   const newTalker = { name, age, id: Number(id), talk: {rate, watchedAt} }
   talkers[findTalker] = newTalker;
   await fs.writeFile(path.resolve(`${__dirname}/${path_file}`), JSON.stringify(talkers));
-  console.log(newTalker);
   return res.status(200).json(newTalker)
 
 });
 
-// app.delete('/talker/:id',
-// tokenValidation, async (req,res) => {
-//   const { id } = req.params;
-//   const data = await fs.readFile(path.resolve(`${__dirname}/${path_file}`), 'utf-8')
-//   const talkers = JSON.parse(data);
-//   const newTalkers = talkers.filter((talker) => talker.id !== Number(id));
-//   await fs.writeFile(path.resolve(`${__dirname}/${path_file}`), JSON.stringify(newTalkers));
-//   return res.sendStatus(204);
-// })
+app.delete('/talker/:id',
+tokenValidation, async (req,res) => {
+  const { id } = req.params;
+  const talkers = await importData();
+  const newTalkers = talkers.filter((talker) => talker.id !== Number(id));
+  await fs.writeFile(path.resolve(`${__dirname}/${path_file}`), JSON.stringify(newTalkers));
+  return res.sendStatus(204);
+})
+
+
 app.listen(PORT, () => {
   console.log('Online');
 });
