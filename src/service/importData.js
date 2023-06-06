@@ -7,6 +7,6 @@ const importData = async () => {
     const data = await fs.readFile(path.resolve(talkerPath), 'utf-8');
     const talkers = JSON.parse(data);
     return talkers;
-}
+};
 
 module.exports = importData;

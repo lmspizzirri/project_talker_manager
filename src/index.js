@@ -1,7 +1,6 @@
 const express = require('express');
 const fs = require('fs/promises');
 const path = require('path');
-const { PassThrough } = require('stream');
 const { ageValidation } = require('./middlewares/ageValidate');
 const { tokenValidation } = require('./middlewares/authValidate');
 const { nameValidation } = require('./middlewares/nameValidate');
@@ -12,34 +11,15 @@ const { dateValidation } = require('./middlewares/dateValidate');
 const { rateQueryValidation } = require('./middlewares/rateQueryValidate');
 const { dateQueryValidation } = require('./middlewares/dateQueryValidate');
 const { rateBodyValidation } = require('./middlewares/rateBodyValidate');
+const { emailVerify, passwordVerify } = require('./middlewares/loginVerify');
+const tokenGenerator = require('./service/tokenGenerator');
 
 const app = express();
 app.use(express.json());
 
-const path_file = '/talker.json'
+const pathFile = '/talker.json';
 const HTTP_OK_STATUS = 200;
 const PORT = process.env.PORT || '3001';
-var emailRegex = /^[-!#$%&'*+\/0-9=?A-Z^_a-z{|}~](\.?[-!#$%&'*+\/0-9=?A-Z^_a-z`{|}~])*@[a-zA-Z0-9](-*\.?[a-zA-Z0-9])*\.[a-zA-Z](-?[a-zA-Z0-9])+$/;
-
-function isEmailValid(email) {
-    if (!email)
-        return false;
-    var valid = emailRegex.test(email);
-    if(!valid)
-        return false;
-    return true;
-}
-
-function tokenGenerator(){
-  let result = '';
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let counter = 0;
-    while (counter < 16) {
-      result += characters.charAt(Math.floor(Math.random() * 16));
-      counter += 1;
-    }
-  return result;
-}
 
 // não remova esse endpoint, e para o avaliador funcionar
 app.get('/', (_request, response) => {
@@ -48,7 +28,7 @@ app.get('/', (_request, response) => {
 
 app.get('/talker', async (_req, res) => {
   const talkers = await importData();
-  return res.status(200).json( talkers );
+  return res.status(200).json(talkers);
 });
 
 app.get('/talker/search',
@@ -56,16 +36,15 @@ tokenValidation,
 rateQueryValidation,
 dateQueryValidation,
  async (req, res) => {
-  const { q, rate, date} = req.query;
+  const { q, rate, date } = req.query;
   const talkers = await importData();
-  if(!talkers) { return res.status(HTTP_OK_STATUS).json([])}
+  if (!talkers) { return res.status(HTTP_OK_STATUS).json([]); }
   let finalTalker = talkers;
   if (q) { finalTalker = finalTalker.filter((talker) => talker.name.includes(q)); }
-  if (rate) { finalTalker = finalTalker.filter((talker) => talker.talk.rate === Number(rate)) };
+  if (rate) { finalTalker = finalTalker.filter((talker) => talker.talk.rate === Number(rate)); }
   if (date) { finalTalker = finalTalker.filter((talker) => talker.talk.watchedAt === date); }
   return res.status(HTTP_OK_STATUS).json(finalTalker);
 });
-
 
 app.patch('/talker/rate/:id', 
 tokenValidation,
@@ -74,13 +53,13 @@ rateBodyValidation, async (req, res) => {
   const { rate } = req.body;
   const talkers = await importData();
   const findTalker = talkers.findIndex((talker) => talker.id === Number(id));
-  if(findTalker === -1) {
+  if (findTalker === -1) {
     return res.status(404).json({
-      message: 'Pessoa palestrante não encontrada'
-    })
-  }
+      message: 'Pessoa palestrante não encontrada',
+    });
+  };
   talkers[findTalker].talk.rate = rate;
-  await fs.writeFile(`${__dirname}/${path_file}`, JSON.stringify(talkers));
+  await fs.writeFile(`${__dirname}/${pathFile}`, JSON.stringify(talkers));
   return res.status(204).json(talkers[talkers]);
 });
 
@@ -89,55 +68,24 @@ app.get('/talker/:id',
   const { id } = req.params;
   const talkers = await importData();
   const findId = talkers.filter((talker) => talker.id === Number(id));
-  if( findId.length > 0 ){
-    return res.status(200).json( findId[0] );
-  } else {
-    return res.status(404).json( {
-      "message": "Pessoa palestrante não encontrada"
-    });
-  }
+  if (findId.length > 0) {
+    return res.status(200).json(findId[0]);
+  } 
+  return res.status(404).json({
+    message: 'Pessoa palestrante não encontrada',
+  });
 });
 
-app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  let emailLength = 0;
-  let passwordLength = 0;
-  let passwordVerify;
-  let emailVerify;
-  if ('email' in req.body){
-    emailLength = email.length;
-    emailVerify = isEmailValid(email);
+app.post('/login', 
+emailVerify,
+passwordVerify,
+async (_req, res) => {
+    const result = tokenGenerator();
+    return res.status(200).json({
+      token: result,
+      });
   }
-  if ('password' in req.body){
-    passwordLength = password.length;
-    passwordVerify = passwordLength >= 6;
-  }
-  switch (true) {
-    case (passwordLength === 0) :
-      return res.status(400).json({
-        "message": "O campo \"password\" é obrigatório"
-      })
-    case (passwordVerify === false) :
-      return res.status(400).json({
-        "message": "O \"password\" deve ter pelo menos 6 caracteres"
-      })
-    case (emailLength === 0) :
-      return res.status(400).json({
-        "message": "O campo \"email\" é obrigatório"
-      })
-    case (emailVerify === false) :
-      return res.status(400).json({
-        "message": "O \"email\" deve ter o formato \"email@email.com\""
-      })
-    case (passwordVerify && emailVerify) :
-      const result = tokenGenerator();
-      return res.status(200).json({
-        "token": result
-      })
-    default:
-      return res.status(500);
-  }
-});
+);
 
 app.post('/talker',  
 tokenValidation, 
@@ -147,7 +95,7 @@ talkValidation,
 rateValidation,
 dateValidation,
 async (req, res) => {
-  const { name, age, talk: {rate, watchedAt} } = req.body;
+  const { name, age, talk: { rate, watchedAt } } = req.body;
   const talkers = await importData();
   const newTalker = {
     name,
@@ -156,11 +104,11 @@ async (req, res) => {
     talk: {
       watchedAt,
       rate,
-    }
+    },
   };
   talkers.push(newTalker);
-  await fs.writeFile(path.resolve(`${__dirname}/${path_file}`), JSON.stringify(talkers));
-  return res.status(201).json(newTalker)
+  await fs.writeFile(path.resolve(`${__dirname}/${pathFile}`), JSON.stringify(talkers));
+  return res.status(201).json(newTalker);
 });
 
 app.put('/talker/:id',
@@ -171,31 +119,29 @@ talkValidation,
 rateValidation,
 dateValidation,
 async (req, res) => {
-  const { name, age, talk: {rate, watchedAt} } = req.body;
+  const { name, age, talk: { rate, watchedAt } } = req.body;
   const { id } = req.params;
   const talkers = await importData();
   const findTalker = talkers.findIndex((el) => el.id === Number(id));
   if (findTalker === -1) {
     return res.status(404).json({
-      "message": "Pessoa palestrante não encontrada"
-    })
+      message: 'Pessoa palestrante não encontrada',
+    });
   }
-  const newTalker = { name, age, id: Number(id), talk: {rate, watchedAt} }
+  const newTalker = { name, age, id: Number(id), talk: { rate, watchedAt } };
   talkers[findTalker] = newTalker;
-  await fs.writeFile(path.resolve(`${__dirname}/${path_file}`), JSON.stringify(talkers));
-  return res.status(200).json(newTalker)
-
+  await fs.writeFile(path.resolve(`${__dirname}/${pathFile}`), JSON.stringify(talkers));
+  return res.status(200).json(newTalker);
 });
 
 app.delete('/talker/:id',
-tokenValidation, async (req,res) => {
+tokenValidation, async (req, res) => {
   const { id } = req.params;
   const talkers = await importData();
   const newTalkers = talkers.filter((talker) => talker.id !== Number(id));
-  await fs.writeFile(path.resolve(`${__dirname}/${path_file}`), JSON.stringify(newTalkers));
+  await fs.writeFile(path.resolve(`${__dirname}/${pathFile}`), JSON.stringify(newTalkers));
   return res.sendStatus(204);
-})
-
+});
 
 app.listen(PORT, () => {
   console.log('Online');
