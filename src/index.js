@@ -57,7 +57,7 @@ rateBodyValidation, async (req, res) => {
     return res.status(404).json({
       message: 'Pessoa palestrante não encontrada',
     });
-  };
+  }
   talkers[findTalker].talk.rate = rate;
   await fs.writeFile(`${__dirname}/${pathFile}`, JSON.stringify(talkers));
   return res.status(204).json(talkers[talkers]);
@@ -84,8 +84,7 @@ async (_req, res) => {
     return res.status(200).json({
       token: result,
       });
-  }
-);
+  },);
 
 app.post('/talker',  
 tokenValidation, 

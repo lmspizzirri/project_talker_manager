@@ -1,4 +1,4 @@
-function tokenGenerator(){
+function tokenGenerator() {
     let result = '';
       const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
       let counter = 0;
@@ -7,6 +7,6 @@ function tokenGenerator(){
         counter += 1;
       }
     return result;
-};
+}
 
 module.exports = tokenGenerator;

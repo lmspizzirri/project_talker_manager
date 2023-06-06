@@ -1,10 +1,12 @@
 function isEmailValid(email) {
     const emailRegex = /\S+@\S+\.\S+/;
     if (!email) {
-    return false; }
+        return false; 
+    }
     const valid = emailRegex.test(email);
     if (!valid) {
-    return false; }
+        return false; 
+    }
     return true;
 };
 
