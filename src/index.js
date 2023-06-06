@@ -7,6 +7,10 @@ const { tokenValidation } = require('./middlewares/authValidate');
 const { nameValidation } = require('./middlewares/nameValidate');
 const { talkValidation } = require('./middlewares/talkValidate');
 const importData = require('./service/importData');
+const { rateValidation } = require('./middlewares/rateValidate');
+const { dateValidation } = require('./middlewares/dateValidate');
+const { rateQueryValidation } = require('./middlewares/rateQueryValidate');
+const { dateQueryValidation } = require('./middlewares/dateQueryValidate');
 
 const app = express();
 app.use(express.json());
@@ -47,13 +51,18 @@ app.get('/talker', async (_req, res) => {
 });
 
 app.get('/talker/search',
-tokenValidation, async (req, res) => {
-  const { q } = req.query;
+tokenValidation,
+rateQueryValidation,
+dateQueryValidation,
+ async (req, res) => {
+  const { q, rate, date} = req.query;
   const talkers = await importData();
-  const searchedTalker = talkers.filter((talker) => talker.name.includes(q));
-  if(!q) { return res.status(200).json(talkers) }
-  if(!searchedTalker) { return res.status(200).json([])}
-  return res.status(200).json(searchedTalker);
+  if(!talkers) { return res.status(HTTP_OK_STATUS).json([])}
+  let finalTalker = talkers;
+  if (q) { finalTalker = finalTalker.filter((talker) => talker.name.includes(q)); }
+  if (rate) { finalTalker = finalTalker.filter((talker) => talker.talk.rate === Number(rate)) };
+  if (date) { finalTalker = finalTalker.filter((talker) => talker.talk.watchedAt === date); }
+  return res.status(HTTP_OK_STATUS).json(finalTalker);
 });
 
 app.get('/talker/:id', async (req, res) => {
@@ -115,6 +124,8 @@ tokenValidation,
 ageValidation,
 nameValidation,
 talkValidation,
+rateValidation,
+dateValidation,
 async (req, res) => {
   const { name, age, talk: {rate, watchedAt} } = req.body;
   const talkers = await importData();
@@ -137,6 +148,8 @@ tokenValidation,
 nameValidation,
 ageValidation,
 talkValidation,
+rateValidation,
+dateValidation,
 async (req, res) => {
   const { name, age, talk: {rate, watchedAt} } = req.body;
   const { id } = req.params;
