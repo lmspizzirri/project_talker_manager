@@ -11,6 +11,7 @@ const { rateValidation } = require('./middlewares/rateValidate');
 const { dateValidation } = require('./middlewares/dateValidate');
 const { rateQueryValidation } = require('./middlewares/rateQueryValidate');
 const { dateQueryValidation } = require('./middlewares/dateQueryValidate');
+const { rateBodyValidation } = require('./middlewares/rateBodyValidate');
 
 const app = express();
 app.use(express.json());
@@ -65,7 +66,26 @@ dateQueryValidation,
   return res.status(HTTP_OK_STATUS).json(finalTalker);
 });
 
-app.get('/talker/:id', async (req, res) => {
+
+app.patch('/talker/rate/:id', 
+tokenValidation,
+rateBodyValidation, async (req, res) => {
+  const { id } = req.params;
+  const { rate } = req.body;
+  const talkers = await importData();
+  const findTalker = talkers.findIndex((talker) => talker.id === Number(id));
+  if(findTalker === -1) {
+    return res.status(404).json({
+      message: 'Pessoa palestrante não encontrada'
+    })
+  }
+  talkers[findTalker].talk.rate = rate;
+  await fs.writeFile(`${__dirname}/${path_file}`, JSON.stringify(talkers));
+  return res.status(204).json(talkers[talkers]);
+});
+
+app.get('/talker/:id',
+ async (req, res) => {
   const { id } = req.params;
   const talkers = await importData();
   const findId = talkers.filter((talker) => talker.id === Number(id));
