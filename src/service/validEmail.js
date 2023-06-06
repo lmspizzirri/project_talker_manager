@@ -8,6 +8,6 @@ function isEmailValid(email) {
         return false; 
     }
     return true;
-};
+}
 
 module.exports = isEmailValid;
